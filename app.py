@@ -12,7 +12,6 @@ import tempfile
 SAMPLE_RATE = 44100
 SEGMENT_LENGTH = 44100   # 1 second
 HOP_LENGTH = 22050       # half overlap
-CHECKPOINTS = "./checkpoints"
 
 # ----------------------------
 # Device
@@ -159,8 +158,8 @@ def main():
     def load_models():
         generator = SEANetGenerator().to(device)
         discriminator = SEANetDiscriminator().to(device)
-        gen_ckpt = os.path.join(CHECKPOINTS, "best_generator.pth")
-        disc_ckpt = os.path.join(CHECKPOINTS, "best_discriminator.pth")
+        gen_ckpt = "best_generator.pth"
+        disc_ckpt = "best_discriminator.pth"
         generator.load_state_dict(torch.load(gen_ckpt, map_location=device))
         discriminator.load_state_dict(torch.load(disc_ckpt, map_location=device))
         return generator, discriminator
@@ -198,3 +197,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
