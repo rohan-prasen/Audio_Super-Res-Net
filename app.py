@@ -22,7 +22,7 @@ warnings.filterwarnings(
 SAMPLE_RATE = 44100
 SEGMENT_LENGTH = 44100   # 1 second
 HOP_LENGTH = 22050       # half overlap
-MAX_DURATION = 30  # seconds to keep from uploaded file
+MAX_DURATION = 60  # seconds to keep from uploaded file
 
 # ----------------------------
 # Device
@@ -158,7 +158,7 @@ def evaluate_audio(reconstructed_waveform, discriminator):
 # ----------------------------------------------------------
 def main():
     st.title("🎵 SEANet Audio Reconstruction Player (Demo Version)")
-    st.caption("For demo on Streamlit Cloud: processing limited to first 10 seconds (stereo).")
+    st.caption("For demo on Streamlit Cloud: processing limited to first 60 seconds (stereo).")
 
     uploaded_file = st.file_uploader("Upload an MP3 file", type=["mp3"])
     if uploaded_file is None:
@@ -194,7 +194,7 @@ def main():
     if waveform.shape[1] > max_len:
         waveform = waveform[:, :max_len]
 
-    st.subheader("▶ Original MP3 (first 10s)")
+    st.subheader("▶ Original MP3")
     st.audio(tmp_mp3_path, format="audio/mp3")
 
     # Reconstruct
@@ -205,7 +205,7 @@ def main():
     tmp_flac = tempfile.NamedTemporaryFile(delete=False, suffix=".flac")
     torchaudio.save(tmp_flac.name, reconstructed, sample_rate=SAMPLE_RATE, format="flac", backend="soundfile")
 
-    st.subheader("🎧 Reconstructed FLAC (first 10s)")
+    st.subheader("🎧 Reconstructed FLAC (first 60s)")
     st.audio(tmp_flac.name, format="audio/flac")
 
     # Get discriminator score
@@ -214,5 +214,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
