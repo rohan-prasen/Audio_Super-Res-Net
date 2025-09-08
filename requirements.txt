@@ -1,7 +1,7 @@
 librosa==0.10.2.post1
 matplotlib==3.8.2
-numpy==2.3.2
-pandas==2.3.2
+numpy==1.26.3
+pandas==2.2.0
 pesq==0.0.4
 pystoi==0.4.1
 soundfile==0.12.1
@@ -9,4 +9,5 @@ streamlit==1.38.0
 torch==2.7.1
 torchaudio==2.7.1
 tqdm==4.66.5
+
 
