@@ -7,7 +7,9 @@ import streamlit as st
 import tempfile
 import warnings
 
-# Suppress only the torchaudio backend dispatch warning
+# ----------------------------------------------------------
+# Suppress torchaudio backend warnings
+# ----------------------------------------------------------
 warnings.filterwarnings(
     "ignore",
     message=r".*Torchaudio.*backend.*",
@@ -20,6 +22,8 @@ warnings.filterwarnings(
 SAMPLE_RATE = 44100
 SEGMENT_LENGTH = 44100   # 1 second
 HOP_LENGTH = 22050       # half overlap
+CHECKPOINTS = "./checkpoints"
+MAX_DURATION = 10  # seconds to keep from uploaded file
 
 # ----------------------------
 # Device
@@ -154,7 +158,8 @@ def evaluate_audio(reconstructed_waveform, discriminator):
 # Streamlit app
 # ----------------------------------------------------------
 def main():
-    st.title("🎵 Lossy to Lossless Audio Reconstruction Player")
+    st.title("🎵 SEANet Audio Reconstruction Player (Demo Version)")
+    st.caption("For demo on Streamlit Cloud: processing limited to first 10 seconds (stereo).")
 
     uploaded_file = st.file_uploader("Upload an MP3 file", type=["mp3"])
     if uploaded_file is None:
@@ -166,8 +171,8 @@ def main():
     def load_models():
         generator = SEANetGenerator().to(device)
         discriminator = SEANetDiscriminator().to(device)
-        gen_ckpt = "best_generator.pth"
-        disc_ckpt = "best_discriminator.pth"
+        gen_ckpt = os.path.join(CHECKPOINTS, "best_generator.pth")
+        disc_ckpt = os.path.join(CHECKPOINTS, "best_discriminator.pth")
         generator.load_state_dict(torch.load(gen_ckpt, map_location=device, weights_only=True))
         discriminator.load_state_dict(torch.load(disc_ckpt, map_location=device, weights_only=True))
         return generator, discriminator
@@ -179,24 +184,29 @@ def main():
         tmp_mp3.write(uploaded_file.read())
         tmp_mp3_path = tmp_mp3.name
 
-    # Load mp3
+    # Load mp3 (soundfile backend)
     waveform, sr = torchaudio.load(tmp_mp3_path, backend="soundfile")
     if sr != SAMPLE_RATE:
         resampler = torchaudio.transforms.Resample(sr, SAMPLE_RATE)
         waveform = resampler(waveform)
 
-    st.subheader("▶ Original MP3")
+    # Trim to MAX_DURATION seconds
+    max_len = SAMPLE_RATE * MAX_DURATION
+    if waveform.shape[1] > max_len:
+        waveform = waveform[:, :max_len]
+
+    st.subheader("▶ Original MP3 (first 10s)")
     st.audio(tmp_mp3_path, format="audio/mp3")
 
     # Reconstruct
     with st.spinner("Reconstructing audio..."):
         reconstructed = reconstruct_audio(waveform, generator)
 
-    # Save reconstructed flac
+    # Save reconstructed flac (soundfile backend)
     tmp_flac = tempfile.NamedTemporaryFile(delete=False, suffix=".flac")
     torchaudio.save(tmp_flac.name, reconstructed, sample_rate=SAMPLE_RATE, format="flac", backend="soundfile")
 
-    st.subheader("🎧 Reconstructed FLAC using the SEANet GAN")
+    st.subheader("🎧 Reconstructed FLAC (first 10s)")
     st.audio(tmp_flac.name, format="audio/flac")
 
     # Get discriminator score
@@ -205,9 +215,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
-
-
-
