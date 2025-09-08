@@ -157,6 +157,9 @@ def evaluate_audio(reconstructed_waveform, discriminator):
 # Streamlit app
 # ----------------------------------------------------------
 def main():
+
+    st.setpage_config(page_title="Lossless Music Convertor", page_icon='music.png', layout='centered')
+
     st.title("🎵 SEANet Audio Reconstruction Player (Demo Version)")
     st.caption("Processing limited to first 150 seconds (stereo).")
 
