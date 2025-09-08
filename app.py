@@ -213,13 +213,13 @@ def main():
         st.download_button(
             label="⬇️ Download Reconstructed Audio (FLAC)",
             data=f,
-            file_name="reconstructed.flac",
+            file_name=f"reconstructed {tmp_flac.name}.flac",
             mime="audio/flac"
         )
 
     # Get discriminator score
     disc_score = evaluate_audio(reconstructed, discriminator)
-    st.metric("Discriminator Score", f"{disc_score*100:.2f}")
+    st.metric("Discriminator Score", f"{disc_score*100:.2f} / 100")
 
 if __name__ == "__main__":
     main()
