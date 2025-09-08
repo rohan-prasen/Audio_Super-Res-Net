@@ -5,6 +5,14 @@ import torch.nn as nn
 import torch.nn.functional as F
 import streamlit as st
 import tempfile
+import warnings
+
+# Suppress only the torchaudio backend dispatch warning
+warnings.filterwarnings(
+    "ignore",
+    message=r".*Torchaudio.*backend.*",
+    category=UserWarning,
+)
 
 # ----------------------------
 # Settings
@@ -197,6 +205,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
