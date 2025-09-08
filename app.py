@@ -22,7 +22,7 @@ warnings.filterwarnings(
 SAMPLE_RATE = 44100
 SEGMENT_LENGTH = 44100   # 1 second
 HOP_LENGTH = 22050       # half overlap
-MAX_DURATION = 10  # seconds to keep from uploaded file
+MAX_DURATION = 30  # seconds to keep from uploaded file
 
 # ----------------------------
 # Device
@@ -214,4 +214,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
