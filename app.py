@@ -158,7 +158,7 @@ def evaluate_audio(reconstructed_waveform, discriminator):
 # ----------------------------------------------------------
 def main():
     st.title("🎵 SEANet Audio Reconstruction Player (Demo Version)")
-    st.caption("For demo on Streamlit Cloud: processing limited to first 150 seconds (stereo).")
+    st.caption("Processing limited to first 150 seconds (stereo).")
 
     uploaded_file = st.file_uploader("Upload an MP3 file", type=["mp3"])
     if uploaded_file is None:
@@ -208,14 +208,18 @@ def main():
     st.subheader("🎧 Reconstructed FLAC (first 150s)")
     st.audio(tmp_flac.name, format="audio/flac")
 
+    # Add download button
+    with open(tmp_flac.name, "rb") as f:
+        st.download_button(
+            label="⬇️ Download Reconstructed Audio (FLAC)",
+            data=f,
+            file_name="reconstructed.flac",
+            mime="audio/flac"
+        )
+
     # Get discriminator score
     disc_score = evaluate_audio(reconstructed, discriminator)
     st.metric("Discriminator Score", f"{disc_score*100:.2f}")
 
 if __name__ == "__main__":
     main()
-
-
-
-
-
