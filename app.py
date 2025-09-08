@@ -160,8 +160,8 @@ def main():
         discriminator = SEANetDiscriminator().to(device)
         gen_ckpt = "best_generator.pth"
         disc_ckpt = "best_discriminator.pth"
-        generator.load_state_dict(torch.load(gen_ckpt, map_location=device))
-        discriminator.load_state_dict(torch.load(disc_ckpt, map_location=device))
+        generator.load_state_dict(torch.load(gen_ckpt, map_location=device, weights_only=True))
+        discriminator.load_state_dict(torch.load(disc_ckpt, map_location=device, weights_only=True))
         return generator, discriminator
 
     generator, discriminator = load_models()
@@ -197,4 +197,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
