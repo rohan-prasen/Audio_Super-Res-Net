@@ -1,0 +1,216 @@
+#!/usr/bin/env python3
+"""
+Audio reconstruction script using SEANet Generator & Discriminator
+- Hardcoded input/output paths
+- No PESQ evaluation (removed completely)
+"""
+
+import os
+import sys
+import traceback
+import torch
+import torchaudio
+import torch.nn as nn
+import torch.nn.functional as F
+
+# ----------------------------
+# Hardcoded paths
+# ----------------------------
+INPUT_PATH = r"C:\Users\Rohan Prasen\Desktop\test"   # file or directory
+OUTPUT_PATH = r"C:\Users\Rohan Prasen\Desktop\output"
+CHECKPOINTS = r".\checkpoints"  # contains best_generator.pth and best_discriminator.pth
+
+# Sample rate & segment settings
+SAMPLE_RATE = 44100
+SEGMENT_LENGTH = 44100   # 1 second
+HOP_LENGTH = 22050       # half overlap
+
+# ----------------------------
+# Device
+# ----------------------------
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print(f"Using device: {device}")
+
+# ---------------------------
+# Define the GAN components
+# ---------------------------
+class SEANetGenerator(nn.Module):
+    def __init__(self):
+        super(SEANetGenerator, self).__init__()
+        self.encoder = nn.Sequential(
+            nn.Conv2d(2, 64, kernel_size=4, stride=2, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(64, 128, kernel_size=4, stride=2, padding=1),
+            nn.ReLU()
+        )
+        self.decoder = nn.Sequential(
+            nn.ConvTranspose2d(128, 64, kernel_size=4, stride=2, padding=1),
+            nn.ReLU(),
+            nn.ConvTranspose2d(64, 2, kernel_size=4, stride=2, padding=1),
+            nn.ReLU()
+        )
+    
+    def forward(self, x):
+        enc = self.encoder(x)
+        out = self.decoder(enc)
+        return out
+
+class SEANetDiscriminator(nn.Module):
+    def __init__(self):
+        super(SEANetDiscriminator, self).__init__()
+        self.model = nn.Sequential(
+            nn.Conv2d(2, 64, kernel_size=4, stride=2, padding=1),
+            nn.LeakyReLU(0.2),
+            nn.Conv2d(64, 128, kernel_size=4, stride=2, padding=1),
+            nn.LeakyReLU(0.2),
+            nn.Conv2d(128, 1, kernel_size=4, stride=1, padding=1),
+            nn.Sigmoid()
+        )
+    
+    def forward(self, x):
+        return self.model(x)
+
+# ----------------------------------------------------------
+# Helper function: Compute overlap-add normalization count
+# ----------------------------------------------------------
+def windowed_count(segment_length, hop_length_stft, device):
+    n_fft = 1024
+    window = torch.hann_window(n_fft).to(device)
+    ones = torch.ones(2, segment_length, device=device)
+    stft = torch.stft(ones, n_fft=n_fft, hop_length=hop_length_stft,
+                      window=window, return_complex=True)
+    return torch.istft(torch.ones_like(stft), n_fft=n_fft, hop_length=hop_length_stft,
+                       window=window, length=segment_length)
+
+# ----------------------------------------------------------
+# Reconstruct audio from an MP3 file using the generator
+# ----------------------------------------------------------
+def reconstruct_audio(mp3_file, generator):
+    print(f"Loading {mp3_file} ...")
+    waveform_mp3, sr = torchaudio.load(mp3_file)
+    if sr != SAMPLE_RATE:
+        raise RuntimeError(f"Sample rate mismatch: {sr} vs expected {SAMPLE_RATE}")
+    if waveform_mp3.shape[0] != 2:
+        raise RuntimeError(f"Expected stereo (2 channels), got {waveform_mp3.shape[0]}")
+    waveform_mp3 = waveform_mp3.to(device)
+
+    num_samples = waveform_mp3.shape[1]
+    n_fft = 1024
+    hop_length_stft = 256
+    window = torch.hann_window(n_fft).to(device)
+
+    num_segments = max(1, (num_samples - SEGMENT_LENGTH) // HOP_LENGTH + 1)
+    if (num_samples - SEGMENT_LENGTH) % HOP_LENGTH != 0:
+        num_segments += 1
+
+    reconstructed_waveform = torch.zeros_like(waveform_mp3).to(device)
+    count = torch.zeros_like(waveform_mp3).to(device)
+
+    generator.eval()
+    with torch.no_grad():
+        for i in range(num_segments):
+            try:
+                start = i * HOP_LENGTH
+                end = start + SEGMENT_LENGTH
+                if end > num_samples:
+                    pad = end - num_samples
+                    segment = torch.cat([waveform_mp3[:, start:], torch.zeros(2, pad, device=device)], dim=1)
+                else:
+                    segment = waveform_mp3[:, start:end]
+
+                stft = torch.stft(segment, n_fft=n_fft, hop_length=hop_length_stft,
+                                  window=window, return_complex=True)
+                magnitude = stft.abs()
+                phase = stft.angle()
+
+                mag_in = magnitude.unsqueeze(0)
+                gen_out = generator(mag_in).squeeze(0)
+
+                # Resize if mismatch
+                if gen_out.shape != magnitude.shape:
+                    gen_out = F.interpolate(gen_out.unsqueeze(0),
+                                            size=(magnitude.shape[1], magnitude.shape[2]),
+                                            mode='bilinear',
+                                            align_corners=False).squeeze(0)
+
+                generated_stft = gen_out * torch.exp(1j * phase)
+                recon_segment = torch.istft(generated_stft, n_fft=n_fft, hop_length=hop_length_stft,
+                                            window=window, length=SEGMENT_LENGTH)
+
+                if end > num_samples:
+                    valid_len = num_samples - start
+                    reconstructed_waveform[:, start:] += recon_segment[:, :valid_len]
+                    count[:, start:] += windowed_count(valid_len, hop_length_stft, device)
+                else:
+                    reconstructed_waveform[:, start:end] += recon_segment
+                    count[:, start:end] += windowed_count(SEGMENT_LENGTH, hop_length_stft, device)
+
+            except Exception:
+                print(f"Exception in segment {i}:")
+                traceback.print_exc()
+                continue
+
+    reconstructed_waveform = reconstructed_waveform / count.clamp(min=1)
+    return reconstructed_waveform, waveform_mp3
+
+# ----------------------------------------------------------
+# Evaluate audio (discriminator only)
+# ----------------------------------------------------------
+def evaluate_audio(reconstructed_waveform, discriminator):
+    disc_score = None
+    try:
+        discriminator.eval()
+        with torch.no_grad():
+            stft_recon = torch.stft(reconstructed_waveform, n_fft=1024, hop_length=256,
+                                    window=torch.hann_window(1024).to(device), return_complex=True)
+            magnitude_recon = stft_recon.abs()
+            disc_score = float(discriminator(magnitude_recon.unsqueeze(0)).mean().item())
+    except Exception:
+        print("Discriminator evaluation failed:")
+        traceback.print_exc()
+    return disc_score
+
+# ----------------------------------------------------------
+# Main runner
+# ----------------------------------------------------------
+def main():
+    # Load models
+    gen_ckpt = os.path.join(CHECKPOINTS, "best_generator.pth")
+    disc_ckpt = os.path.join(CHECKPOINTS, "best_discriminator.pth")
+    if not os.path.exists(gen_ckpt) or not os.path.exists(disc_ckpt):
+        print("Checkpoints not found.")
+        sys.exit(2)
+
+    generator = SEANetGenerator().to(device)
+    discriminator = SEANetDiscriminator().to(device)
+    generator.load_state_dict(torch.load(gen_ckpt, map_location=device))
+    discriminator.load_state_dict(torch.load(disc_ckpt, map_location=device))
+
+    os.makedirs(OUTPUT_PATH, exist_ok=True)
+
+    if os.path.isfile(INPUT_PATH):
+        filelist = [INPUT_PATH]
+    elif os.path.isdir(INPUT_PATH):
+        filelist = [os.path.join(INPUT_PATH, f) for f in os.listdir(INPUT_PATH) if f.lower().endswith(".mp3")]
+    else:
+        print("Invalid input path")
+        sys.exit(1)
+
+    for filepath in filelist:
+        print("="*80)
+        print(f"Processing {filepath}")
+        try:
+            reconstructed, _ = reconstruct_audio(filepath, generator)
+            outname = f"reconstructed_{os.path.basename(filepath).rsplit('.',1)[0]}.flac"
+            outpath = os.path.join(OUTPUT_PATH, outname)
+            torchaudio.save(outpath, reconstructed.cpu(), sample_rate=SAMPLE_RATE, format="flac")
+            print(f"Saved: {outpath}")
+
+            disc_score = evaluate_audio(reconstructed, discriminator)
+            print(f"Discriminator Score: {disc_score*100:.2f}")
+        except Exception:
+            print(f"Failed {filepath}:")
+            traceback.print_exc()
+
+if __name__ == "__main__":
+    main()
