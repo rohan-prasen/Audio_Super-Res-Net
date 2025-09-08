@@ -24,8 +24,9 @@ Using adversarial learning, it restores lost high-frequency details and natural 
 
 ```bash
 # Clone the repo
-git clone https://github.com/your-username/audio-super-resolution-gan.git
+git clone https://github.com/rohan-prasen/Audio_Super-Res-Net.git
 cd Audio_Super-Res-Net
+
 # Install dependencies
 pip install -r requirements.txt
 
