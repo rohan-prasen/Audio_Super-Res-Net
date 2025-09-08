@@ -6,6 +6,7 @@ pesq==0.0.4
 pystoi==0.4.1
 soundfile==0.12.1
 streamlit==1.38.0
-torch==2.7.1+cu128
-torchaudio==2.7.1+cu128
+torch==2.7.1
+torchaudio==2.7.1
 tqdm==4.66.5
+
