@@ -172,7 +172,7 @@ def main():
         tmp_mp3_path = tmp_mp3.name
 
     # Load mp3
-    waveform, sr = torchaudio.load(tmp_mp3_path, backend="sox_io)
+    waveform, sr = torchaudio.load(tmp_mp3_path, backend="sox_io")
     if sr != SAMPLE_RATE:
         resampler = torchaudio.transforms.Resample(sr, SAMPLE_RATE)
         waveform = resampler(waveform)
@@ -197,6 +197,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
