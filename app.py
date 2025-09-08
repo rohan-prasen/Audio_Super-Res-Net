@@ -219,7 +219,7 @@ def main():
 
     # Get discriminator score
     disc_score = evaluate_audio(reconstructed, discriminator)
-    st.metric("Discriminator Score", f"{disc_score*100:.2f} / 100")
+    st.metric("Discriminator Score", f"{disc_score*100:.2f}")
 
 if __name__ == "__main__":
     main()
