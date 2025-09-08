@@ -22,7 +22,6 @@ warnings.filterwarnings(
 SAMPLE_RATE = 44100
 SEGMENT_LENGTH = 44100   # 1 second
 HOP_LENGTH = 22050       # half overlap
-CHECKPOINTS = "./checkpoints"
 MAX_DURATION = 10  # seconds to keep from uploaded file
 
 # ----------------------------
@@ -171,8 +170,8 @@ def main():
     def load_models():
         generator = SEANetGenerator().to(device)
         discriminator = SEANetDiscriminator().to(device)
-        gen_ckpt = os.path.join(CHECKPOINTS, "best_generator.pth")
-        disc_ckpt = os.path.join(CHECKPOINTS, "best_discriminator.pth")
+        gen_ckpt = "best_generator.pth"
+        disc_ckpt = "best_discriminator.pth"
         generator.load_state_dict(torch.load(gen_ckpt, map_location=device, weights_only=True))
         discriminator.load_state_dict(torch.load(disc_ckpt, map_location=device, weights_only=True))
         return generator, discriminator
@@ -215,3 +214,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
