@@ -208,14 +208,14 @@ def main():
     st.subheader("🎧 Reconstructed FLAC (first 150s)")
     st.audio(tmp_flac.name, format="audio/flac")
 
-    # Add download button
-    with open(tmp_flac.name, "rb") as f:
-        st.download_button(
-            label="⬇️ Download Reconstructed Audio (FLAC)",
-            data=f,
-            file_name=f"reconstructed{tmp_flac.name}.flac",
-            mime="audio/flac"
-        )
+    # # Add download button
+    # with open(tmp_flac.name, "rb") as f:
+    #     st.download_button(
+    #         label="⬇️ Download Reconstructed Audio (FLAC)",
+    #         data=f,
+    #         file_name=f"reconstructed{tmp_flac.name}.flac",
+    #         mime="audio/flac"
+    #     )
 
     # Get discriminator score
     disc_score = evaluate_audio(reconstructed, discriminator)
