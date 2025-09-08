@@ -213,7 +213,7 @@ def main():
         st.download_button(
             label="⬇️ Download Reconstructed Audio (FLAC)",
             data=f,
-            file_name=f"reconstructed {tmp_flac.name}.flac",
+            file_name=f"reconstructed{tmp_flac.name}.flac",
             mime="audio/flac"
         )
 
