@@ -163,6 +163,8 @@ def main():
     st.title("🎵 SEANet Audio Reconstruction Player (Demo Version)")
     st.caption("Processing limited to first 150 seconds (stereo).")
 
+    st.divider()
+
     uploaded_file = st.file_uploader("Upload an MP3 file", type=["mp3"])
     if uploaded_file is None:
         st.info("Please upload an MP3 file to begin.")
