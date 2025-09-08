@@ -172,7 +172,7 @@ def main():
         tmp_mp3_path = tmp_mp3.name
 
     # Load mp3
-    waveform, sr = torchaudio.load(tmp_mp3_path, backend="sox_io")
+    waveform, sr = torchaudio.load(tmp_mp3_path, backend="soundfile")
     if sr != SAMPLE_RATE:
         resampler = torchaudio.transforms.Resample(sr, SAMPLE_RATE)
         waveform = resampler(waveform)
@@ -186,7 +186,7 @@ def main():
 
     # Save reconstructed flac
     tmp_flac = tempfile.NamedTemporaryFile(delete=False, suffix=".flac")
-    torchaudio.save(tmp_flac.name, reconstructed, sample_rate=SAMPLE_RATE, format="flac", backend="sox_io")
+    torchaudio.save(tmp_flac.name, reconstructed, sample_rate=SAMPLE_RATE, format="flac", backend="soundfile")
 
     st.subheader("🎧 Reconstructed FLAC using the SEANet GAN")
     st.audio(tmp_flac.name, format="audio/flac")
@@ -197,6 +197,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
